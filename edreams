@@ -1,0 +1,80 @@
+import time
+
+import openpyxl
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from openpyxl import load_workbook
+from pyquery import PyQuery as pq
+import datetime
+
+
+browser = webdriver.Chrome()
+
+
+INDEX_URL = 'https://hotels.edreams.net/searchresults.en-us.html?aid=343806&label=metaskyscanneredreams-link-dmetaus-hotel-56509-clkid-e77ee3a038a711eda877170d468b605f&lang=en-us&sid=fe171ecedf873da69972c4ee60ee3ba9&sb=1&src=searchresults&src_elem=sb&error_url=https%3A%2F%2Fhotels.edreams.net%2Fsearchresults.en-us.html%3Faid%3D343806%26label%3Dmetaskyscanneredreams-link-dmetaus-hotel-56509-clkid-e77ee3a038a711eda877170d468b605f%26sid%3Dfe171ecedf873da69972c4ee60ee3ba9%26tmpl%3Dsearchresults%26checkin%3D{check_in}%3Bcheckout%3D{check_out}%3Bclass_interval%3D1%3Bdest_id%3D20014181%3Bdest_type%3Dcity%3Bdtdisc%3D0%3Bgroup_adults%3D2%3Bgroup_children%3D0%3Bhighlighted_hotels%3D56509%3Binac%3D0%3Bindex_postcard%3D0%3Blabel_click%3Dundef%3Bno_rooms%3D1%3Boffset%3D75%3Bpostcard%3D0%3Braw_dest_type%3Dcity%3Broom1%3DA%252CA%3Bsb_price_type%3Dtotal%3Bshow_room%3D5650935_274564851_2_2_0%3Bshw_aparth%3D1%3Bslp_r_match%3D0%3Bsrpvid%3Dac932cc306c2008a%3Bss_all%3D0%3Bssb%3Dempty%3Bsshis%3D0%26%26&highlighted_hotels=56509&ss={city1}&is_ski_area=0&ssne={city2}&ssne_untouched={city3}&city={number}&checkin_year=2022&checkin_month={in_month}&checkin_monthday={in_day}&checkout_year=2022&checkout_month={out_month}&checkout_monthday={out_day}&group_adults=2&group_children=0&no_rooms=1&from_sf=1'
+
+def scrape_url(url):
+    browser.get(url)
+    browser.implicitly_wait(10)
+
+def parse_url(html):
+    doc = pq(html)
+    items = doc('.d20f4628d0')
+    datas = []
+    for i in items.items():
+        data = []
+        name = i('.a23c043802').text()
+        price = i('.bd73d13072').text()
+        content = i('.f9afbb0024').text()
+        city = browser.find_element(By.CSS_SELECTOR,'.b4273d69aa').text
+        photo = i('.b8b0793b0e').attr('src')
+        data.append(name)
+        data.append(price)
+        data.append(content)
+        data.append(city)
+        data.append(photo)
+        datas.append(data)
+    return datas
+
+
+def main():
+    list = ['Los+Angeles','New+York','Chicago','Houston','Phoenix']
+    dict = {'Los+Angeles':20014181,'New+York':20088325,'Chicago':20033173,'Houston':20128761,'Phoenix':20006890}
+    for i in list:
+        wb = openpyxl.Workbook()
+        wb.save(f'../edreams/{i}.xlsx')
+        wb = load_workbook(f'../edreams/{i}.xlsx')
+        ws = wb.active
+        d = 1
+        in_date = datetime.date.today()
+        out_date = in_date + datetime.timedelta(days=7)
+        ws.cell(d, 1).value = in_date
+        ws.cell(d + 1, 1).value = 'name'
+        ws.cell(d + 1, 2).value = 'price'
+        ws.cell(d + 1, 3).value = 'content'
+        ws.cell(d + 1, 4).value = 'city'
+        ws.cell(d + 1, 5).value = 'photo'
+        d += 2
+        scrape_url(INDEX_URL.format(city1=i, city2=i, city3=i, check_in=in_date, check_out=out_date, in_day=in_date.day,
+                                    in_month=in_date.month, out_day=out_date.day, out_month=out_date.month,
+                                    number=dict[i]))
+        pages = browser.find_elements(By.CSS_SELECTOR, '.f32a99c8d1 .f9c5690c58')[-2].text
+        for p in range(0, int(pages) - 1):
+            time.sleep(3)
+            datas = parse_url(browser.page_source)
+            for data in datas:
+                ws.cell(d, 1).value = data[0]
+                ws.cell(d, 2).value = data[1]
+                ws.cell(d, 3).value = data[2]
+                ws.cell(d, 4).value = data[3]
+                ws.cell(d, 5).value = data[4]
+                d += 1
+            wb.save(f'../edreams/{i}.xlsx')
+            browser.find_elements(By.CSS_SELECTOR, '.b727170def .fc63351294')[-1].click()
+            time.sleep(10)
+
+
+
+if __name__=='__main__':
+    main()
+    browser.close()
