@@ -1,0 +1,83 @@
+import time
+
+import openpyxl
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from openpyxl import load_workbook
+from pyquery import PyQuery as pq
+import datetime
+
+
+
+browser = webdriver.Chrome()
+
+INDEX_URL = 'https://book.cheapoair.com/searchresults.en-us.html?aid=1461715&label=desktop-1461715-click-h-coa-google-competitor&lang=en-us&sid=fe171ecedf873da69972c4ee60ee3ba9&sb=1&src=searchresults&src_elem=sb&error_url=https%3A%2F%2Fbook.cheapoair.com%2Fsearchresults.en-us.html%3Faid%3D1461715%26label%3Ddesktop-1461715-click-h-coa-google-competitor%26sid%3Dfe171ecedf873da69972c4ee60ee3ba9%26tmpl%3Dsearchresults%26ac_click_type%3Db%3Bac_position%3D0%3Bcheckin_month%3D9%3Bcheckin_monthday%3D23%3Bcheckin_year%3D2022%3Bcheckout_month%3D9%3Bcheckout_monthday%3D30%3Bcheckout_year%3D2022%3Bcity%3D-2601889%3Bclass_interval%3D1%3Bdest_id%3D20014181%3Bdest_type%3Dcity%3Bdtdisc%3D0%3Bfrom_sf%3D1%3Bgroup_adults%3D2%3Bgroup_children%3D0%3Biata%3DLAX%3Binac%3D0%3Bindex_postcard%3D0%3Blabel_click%3Dundef%3Bno_rooms%3D1%3Boffset%3D0%3Bpostcard%3D0%3Braw_dest_type%3Dcity%3Broom1%3DA%252CA%3Bsb_price_type%3Dtotal%3Bsearch_selected%3D1%3Bshw_aparth%3D1%3Bslp_r_match%3D0%3Bsrc%3Dsearchresults%3Bsrc_elem%3Dsb%3Bsrpvid%3D44381a9096eb011c%3Bss%3DLos%252520Angeles%25252C%252520California%25252C%252520United%252520States%3Bss_all%3D0%3Bss_raw%3Dlos%3Bssb%3Dempty%3Bsshis%3D0%3Bssne%3DLondon%3Bssne_untouched%3DLondon%26%26&ss={city2}&is_ski_area=0&ssne={city3}&ssne_untouched=Los+Angeles&city={number}&checkin_year=2022&checkin_month={in_month}&checkin_monthday={in_date}&checkout_year=2022&checkout_month={out_month}&checkout_monthday={out_date}&group_adults=1&group_children=0&no_rooms=1&from_sf=1'
+def scrape_url(url):
+    browser.get(url)
+    browser.implicitly_wait(10)
+
+
+def parse_url(html):
+    doc = pq(html)
+    items = doc('.d20f4628d0')
+    datas = []
+    for i in items.items():
+        data = []
+        name = i('.a23c043802').text()
+        price = i('.fbd1d3018c').text()
+        content = i('.f9afbb0024').text()
+        city = browser.find_element(By.CSS_SELECTOR,'.b4273d69aa').text
+        photo = i('.b8b0793b0e').attr('src')
+        data.append(name)
+        data.append(price)
+        data.append(content)
+        data.append(city)
+        data.append(photo)
+        datas.append(data)
+    return datas
+
+
+def main():
+    day = datetime.date.today()
+    list = ['Los+Angeles','New+York','Chicago','Houston','Phoenix']
+    dict = {'Houston':20128761,'New+York':20088325,'Los+Angeles':20014181,'Chicago':20033173,'Phoenix':20006890}
+    time.sleep(10)
+    for i in list:
+        wb = openpyxl.Workbook()
+        wb.save(f'../cheapoair/{i}.xlsx')
+        wb = load_workbook(f'../cheapoair/{i}.xlsx')
+        ws = wb.active
+
+        d = 1
+        in_date = datetime.date.today()
+        out_date = in_date + datetime.timedelta(days=7)
+        ws.cell(d, 1).value = in_date
+        ws.cell(d + 1, 1).value = 'name'
+        ws.cell(d + 1, 2).value = 'price'
+        ws.cell(d + 1, 3).value = 'content'
+        ws.cell(d + 1, 4).value = 'city'
+        ws.cell(d + 1, 5).value = 'photo'
+        d += 2
+        scrape_url(INDEX_URL.format(city1=i, city2=i, city3=i, in_date=in_date.day, in_month=in_date.month,
+                                    out_date=out_date.day, out_month=out_date.month, number=dict[i]))
+        browser.implicitly_wait(10)
+        pages = browser.find_elements(By.CSS_SELECTOR, '.f32a99c8d1 .f9c5690c58')[-2].text
+        for p in range(0, int(pages)):
+            browser.implicitly_wait(10)
+            time.sleep(3)
+            datas = parse_url(browser.page_source)
+            for data in datas:
+                ws.cell(d, 1).value = data[0]
+                ws.cell(d, 2).value = data[1]
+                ws.cell(d, 3).value = data[2]
+                ws.cell(d, 4).value = data[3]
+                ws.cell(d, 5).value = data[4]
+                d += 1
+            wb.save(f'../cheapoair/{i}.xlsx')
+            browser.find_elements(By.CSS_SELECTOR, '.f32a99c8d1 .f9c5690c58')[-1].click()
+            browser.implicitly_wait(10)
+
+if __name__=='__main__':
+    main()
+    browser.close()
+
