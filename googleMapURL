@@ -1,0 +1,30 @@
+from openpyxl import load_workbook
+
+
+cities = ['Agoura_Hills','Alhambra','Arcadia','Artesia','Avalon','Azusa','Baldwin_Park','Bell','Bell_Gardens','Bell_flower',
+          'Beverly_Hills','Bradbury','Burbank','Calabasas','Carson','Cerritos','City_of_Industry','Claremont','Commerce','Compton','Covina','Cudahy','Culver_City',
+          'Diamond_Bar','Downey','Duarte','El_Monte','El_Segundo','Gardena','Glendale','Glendora','Hawaiian_Gardens','Hawthorne','Hermosa_Beach','Hidden_Hills','Huntington_Park','Inglewood',
+          'Irwindale','La_Canada_Flintridge','La_Habra_Heights','La_Mirada','La_Puente','La_Verne','Lakewood','Lancaster','Lawndale','Lomita','Long_Beach','Los_Angeles','Lynwood',
+          'Malibu','Manhattan_Beach','Maywood','Monrovia','Montebello','Monterey_Park','Norwalk','Palmdale','Palos_Verdes_Estates','Paramount',
+          'Pasadena','Pico_Rivera','Pomona','Rancho_Palos_Verdes','Redondo_Beach','Rolling_Hills','Rollin_Hills_Estates','Rosemead','San_Dimas','San_Fernando',
+          'San_Gabriel','San_Marino','Santa_Clarita','Santa_Fe_Springs','Santa_Monica','Sierra_Madre','Signal_Hill','South_El_Monte','South_Gate','South_Pasadena','Temple_City',
+          'Torrance','Vernon','Walnut','West_Covina','West_Hollywood','Westlake_Village','Whittier']
+def main():
+    d=1
+    url = []
+    wb = load_workbook(filename='sURL.xlsx')
+    ws = wb.active
+
+    for i in range(len(cities)):
+        a = 'https://en.wikipedia.org/wiki/%s,_California' % cities[i]
+        url.append(a)
+
+    for i in range(len(url)):
+        ws.cell(d + 1, 2).value = url[i]
+        d += 1
+    wb.save('sURL.xlsx')
+
+    print(url)
+
+
+main()
